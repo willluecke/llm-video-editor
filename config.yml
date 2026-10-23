@@ -1,0 +1,35 @@
+input_dir: ~/Downloads
+match: ["*.mp4", "*.mov", "*.m4v"]
+tighten:
+  threshold: 4%
+  margin: 0.2s
+  silent_speed: null
+transcribe:
+  engine: whisper-cli
+  model: small.en
+  model_path: models/ggml-small.en.bin
+  burn_captions: true
+brand:
+  watermark: brand/watermark.png
+  watermark_text: LLM VIDEO EDITOR
+  font: brand/fonts/Inter-Bold.ttf
+  color_primary: "#2563EB"
+targets:
+  horizontal:
+    w: 1920
+    h: 1080
+    caption_size: 12
+    captions: soft
+  vertical:
+    w: 1080
+    h: 1920
+    caption_size: 16
+    captions: burn
+    reframe: center-crop
+export:
+  loudness_lufs: -14
+  true_peak: -1.5
+  loudness_range: 11
+  video_bitrate: 12M
+  audio_bitrate: 192k
+  out_dir: out

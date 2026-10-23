@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LLM Video Editor</title>
+  <link rel="stylesheet" href="/vendor/xterm.css">
+  <link rel="stylesheet" href="/styles.css?v=20260813-episode-template-v23">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-mark" aria-hidden="true"><span></span><span></span></div>
+      <div class="brand-copy">
+        <strong>LLM VIDEO EDITOR</strong>
+        <small>Manual finishing workspace</small>
+      </div>
+      <div class="project-title" id="project-title">Loading projects…</div>
+      <div class="top-actions">
+        <span class="save-state" id="save-state">No changes</span>
+        <label class="export-picker"><span>Export</span><select id="export-preset"><option value="source">Source quality</option><option value="youtube">YouTube 1080p</option><option value="vertical">Vertical 1080×1920</option><option value="draft">Draft 720p</option></select></label>
+        <button class="button ghost" id="duplicate-episode-button" title="Duplicate this encoded format for the next episode" hidden>Duplicate episode</button>
+        <button class="button ghost" id="save-button" title="Save edit (⌘S)">Save</button>
+        <button class="button primary" id="render-button">Render edit</button>
+      </div>
+      <div class="render-progress" id="render-progress" hidden><i id="render-progress-bar"></i><span id="render-progress-label">Preparing render…</span></div>
+    </header>
+
+    <main class="workspace">
+      <aside class="panel media-panel">
+        <div class="panel-heading">
+          <span>Project media</span>
+          <button class="icon-button" id="refresh-button" title="Refresh media">↻</button>
+        </div>
+        <div class="search-wrap">
+          <span>⌕</span>
+          <input id="project-search" type="search" placeholder="Search projects" aria-label="Search projects">
+        </div>
+        <div class="project-list" id="project-list"></div>
+        <section class="template-contract" id="template-contract" hidden>
+          <div class="template-heading"><strong>Episode mechanism</strong><span id="template-progress">—</span></div>
+          <div class="template-slots" id="template-slots"></div>
+        </section>
+        <div class="asset-bin-heading"><span>Media bin</span><button id="import-media-button" type="button">＋ Add media</button></div>
+        <input id="import-media-input" type="file" accept="video/mp4,video/quicktime,video/x-m4v,video/webm,audio/mp4,audio/mpeg,audio/wav,audio/aac,audio/flac" multiple hidden>
+        <div class="asset-list" id="asset-list"><span class="asset-empty">Open a project to add media.</span></div>
+        <div class="panel-footer"><span id="project-count">0 projects</span><span>Local</span></div>
+      </aside>
+
+      <section class="monitor-panel">
+        <div class="panel-heading monitor-heading">
+          <span>Program</span>
+          <label class="version-picker">
+            <span>Version</span>
+            <select id="media-select" aria-label="Media version"></select>
+          </label>
+        </div>
+        <div class="monitor-stage">
+          <div class="video-frame" id="video-frame">
+            <video id="preview" class="preview-video active" preload="auto" playsinline></video>
+            <video id="preview-standby-1" class="preview-video" preload="auto" playsinline aria-hidden="true"></video>
+            <video id="preview-standby-2" class="preview-video" preload="auto" playsinline aria-hidden="true"></video>
+            <video id="preview-standby-3" class="preview-video" preload="auto" playsinline aria-hidden="true"></video>
+            <video id="preview-standby-4" class="preview-video" preload="auto" playsinline aria-hidden="true"></video>
+            <div class="title-overlay" id="title-overlay" hidden></div>
+            <div class="empty-monitor" id="empty-monitor">
+              <div class="empty-icon">▶</div>
+              <strong>Select an edited video</strong>
+              <span>Completed pipeline exports appear here.</span>
+            </div>
+          </div>
+        </div>
+        <div class="transport">
+          <time id="current-time">00:00:00:00</time>
+          <div class="transport-buttons">
+            <button class="transport-button" id="jump-back" title="Go to sequence start">│◀</button>
+            <button class="play-button" id="play-button" title="Play / pause (Space)">▶</button>
+            <button class="transport-button" id="jump-forward" title="Go to sequence end">▶│</button>
+          </div>
+          <time id="total-time">00:00:00:00</time>
+        </div>
+      </section>
+
+      <aside class="panel operator-panel">
+        <div class="operator-heading">
+          <strong>Operator</strong>
+          <div class="assistant-status">
+            <span class="status-dot" id="terminal-status-dot"></span>
+            <span id="terminal-status">Codex</span>
+          </div>
+          <span class="access-badge" id="operator-access-badge" title="Codex requests approval for sensitive commands">Approval-aware</span>
+          <button class="terminal-tool" id="terminal-interrupt" title="Interrupt current task (Ctrl-C)">■</button>
+          <button class="terminal-tool" id="terminal-restart" title="Restart Codex terminal">↻</button>
+        </div>
+        <section class="operator-clip-panel">
+          <div class="inspector-empty" id="inspector-empty">
+            <span class="selection-icon">◇</span>
+            <span>Select a timeline clip for manual controls.</span>
+          </div>
+          <form class="inspector-form" id="inspector-form" hidden>
+            <div class="operator-clip-title">
+              <label class="field wide"><span>Selected clip</span><input id="clip-label" type="text"></label>
+              <button type="button" class="clip-trash" id="delete-button" title="Delete clip">⌫</button>
+            </div>
+            <div class="slot-context" id="slot-context" hidden>
+              <strong id="slot-name">Story slot</strong>
+              <span id="slot-prompt"></span>
+            </div>
+            <div class="replace-media" id="replace-media" hidden>
+              <label class="field"><span>Replacement media</span><select id="replacement-media"></select></label>
+              <button class="mini-action" id="replace-media-button" type="button">Replace · keep timing</button>
+            </div>
+            <div class="field-row">
+              <label class="field"><span>Source in</span><input id="clip-start" type="number" step="0.01" min="0"></label>
+              <label class="field"><span>Source out</span><input id="clip-end" type="number" step="0.01" min="0"></label>
+            </div>
+            <label class="field range-field">
+              <span>Audio volume <output id="volume-value">100%</output></span>
+              <input id="clip-volume" type="range" min="0" max="2" step="0.01">
+            </label>
+            <div class="operator-metadata">
+              <span>Clip <strong id="clip-duration">—</strong></span>
+              <span>Sequence <strong id="sequence-duration">—</strong></span>
+              <span id="format-value">—</span>
+              <span id="fps-value">—</span>
+            </div>
+            <details class="control-disclosure">
+              <summary>Tracks &amp; timing</summary>
+              <div class="compact-grid">
+                <label class="field"><span>Track</span><select id="clip-track"></select></label>
+                <label class="field"><span>Speed</span><input id="clip-speed" type="number" min="0.1" max="100" step="0.05"></label>
+                <label class="field"><span>Timeline start</span><input id="clip-timeline-start" type="number" min="0" step="0.01"></label>
+                <button class="mini-action" id="unlink-audio" type="button">Unlink audio</button>
+              </div>
+            </details>
+            <details class="control-disclosure">
+              <summary>Transition</summary>
+              <div class="compact-grid four">
+                <label class="field"><span>In</span><select id="transition-in"><option value="none">None</option><option value="fade">Fade</option><option value="dissolve">Dissolve</option><option value="wipeleft">Wipe</option></select></label>
+                <label class="field"><span>Seconds</span><input id="transition-in-duration" type="number" min="0" max="5" step="0.05"></label>
+                <label class="field"><span>Out</span><select id="transition-out"><option value="none">None</option><option value="fade">Fade</option><option value="dissolve">Dissolve</option><option value="wipeleft">Wipe</option></select></label>
+                <label class="field"><span>Seconds</span><input id="transition-out-duration" type="number" min="0" max="5" step="0.05"></label>
+              </div>
+            </details>
+            <details class="control-disclosure">
+              <summary>Transform &amp; crop</summary>
+              <div class="compact-grid four">
+                <label class="field"><span>Scale</span><input id="clip-scale" type="number" min="0.1" max="4" step="0.05"></label>
+                <label class="field"><span>X</span><input id="clip-x" type="number" step="1"></label>
+                <label class="field"><span>Y</span><input id="clip-y" type="number" step="1"></label>
+                <label class="field"><span>Rotation °</span><input id="clip-rotation" type="number" min="-270" max="270" step="90"></label>
+                <label class="field"><span>Crop top %</span><input id="crop-top" type="number" min="0" max="49" step="0.5"></label>
+                <label class="field"><span>Right %</span><input id="crop-right" type="number" min="0" max="49" step="0.5"></label>
+                <label class="field"><span>Bottom %</span><input id="crop-bottom" type="number" min="0" max="49" step="0.5"></label>
+                <label class="field"><span>Left %</span><input id="crop-left" type="number" min="0" max="49" step="0.5"></label>
+              </div>
+            </details>
+            <details class="control-disclosure">
+              <summary>Color &amp; audio</summary>
+              <div class="compact-grid four">
+                <label class="field"><span>Brightness</span><input id="color-brightness" type="number" min="-1" max="1" step="0.05"></label>
+                <label class="field"><span>Contrast</span><input id="color-contrast" type="number" min="0" max="3" step="0.05"></label>
+                <label class="field"><span>Saturation</span><input id="color-saturation" type="number" min="0" max="3" step="0.05"></label>
+                <label class="field"><span>Temperature</span><input id="color-temperature" type="number" min="-1" max="1" step="0.05"></label>
+                <label class="field"><span>Audio fade in</span><input id="audio-fade-in" type="number" min="0" max="10" step="0.05"></label>
+                <label class="field"><span>Audio fade out</span><input id="audio-fade-out" type="number" min="0" max="10" step="0.05"></label>
+                <button class="mini-action" id="add-keyframe" type="button">＋ Keyframe here</button>
+                <span class="keyframe-count" id="keyframe-count">0 keyframes</span>
+              </div>
+            </details>
+            <div class="text-controls" id="text-controls" hidden>
+              <label class="field"><span>Title / caption text</span><textarea id="clip-text" rows="2"></textarea></label>
+              <div class="compact-grid"><label class="field"><span>Font size</span><input id="font-size" type="number" min="12" max="240"></label><label class="field"><span>Color</span><input id="text-color" type="color"></label></div>
+            </div>
+          </form>
+        </section>
+        <div class="context-strip">
+          <span id="assistant-context">No edit selected</span>
+          <button id="review-edit-button" type="button">Review edit</button>
+        </div>
+        <div class="terminal-host" id="terminal-host">
+          <div class="terminal-loading" id="terminal-loading">
+            <span class="terminal-glyph">›_</span>
+            <strong>Starting Operator…</strong>
+            <small>Codex · ChatGPT subscription</small>
+          </div>
+          <div id="codex-terminal"></div>
+        </div>
+        <div class="terminal-footer"><span>Codex CLI · hidden macOS PTY</span><span>Ctrl-C stops</span></div>
+      </aside>
+
+      <section class="timeline-panel">
+        <div class="timeline-toolbar">
+          <div class="tool-group">
+            <button class="tool active" title="Selection tool">↖</button>
+            <button class="tool" id="split-button" title="Split at playhead (S)">✂</button>
+            <span class="divider"></span>
+            <button class="tool" id="undo-button" title="Undo (⌘Z)">↶</button>
+            <button class="tool" id="redo-button" title="Redo (⇧⌘Z)">↷</button>
+            <span class="divider"></span>
+            <button class="tool text-tool" id="add-title" title="Add title at playhead">T</button>
+            <button class="tool text-tool" id="add-caption" title="Add caption at playhead">CC</button>
+            <button class="track-add" id="add-video-track" title="Add video track">＋V</button>
+            <button class="track-add" id="add-audio-track" title="Add audio track">＋A</button>
+          </div>
+          <div class="sequence-name"><i></i><span id="sequence-name">Generated edit</span></div>
+          <label class="zoom-control"><span>−</span><input id="zoom" type="range" min="24" max="180" value="70"><span>＋</span></label>
+        </div>
+        <div class="timeline-layout">
+          <div class="track-controls" id="track-controls">
+            <div class="ruler-spacer"></div>
+          </div>
+          <div class="timeline-scroll" id="timeline-scroll">
+            <div class="timeline-content" id="timeline-content">
+              <div class="ruler" id="ruler"></div>
+              <div class="track-lanes" id="track-lanes"></div>
+              <div class="playhead" id="playhead"><span></span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+    <div class="toast" id="toast" role="status"></div>
+  </div>
+  <script src="/vendor/xterm.js"></script>
+  <script src="/vendor/addon-fit.js"></script>
+  <script src="/app.js?v=20260813-episode-template-v23"></script>
+</body>
+</html>

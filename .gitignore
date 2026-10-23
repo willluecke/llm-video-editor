@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+*.egg-info/
+# Generated app bundles and local RecCli memory are machine-specific.
+build/
+devsession/
+*.devproject
+macos/NativeApp/.build/
+work/*
+!work/.gitkeep
+out/*
+!out/.gitkeep
+models/*
+!models/.gitkeep
+.DS_Store

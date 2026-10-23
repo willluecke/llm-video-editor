@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llm-video-editor"
+version = "0.1.0"
+description = "Deterministic local video finishing pipeline"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+dependencies = ["PyYAML>=6.0"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+video-pipeline = "video_pipeline.cli:main"
+lve = "video_pipeline.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+video_pipeline = ["ui/*.html", "ui/*.css", "ui/*.js", "ui/vendor/*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
